@@ -83,59 +83,65 @@ export const DEFAULT_JOB_BOARD_CONFIG: JobBoardConfig = {
 };
 
 // ============================================================================
-// JOB (Display Model)
+// JOB (API Response Model)
 // ============================================================================
 
-/**
- * Location for display
- */
 export interface JobLocation {
   city?: string;
   state?: string;
   country?: string;
 }
 
-/**
- * Job type for display in the job board components
- * This is a display-focused model, not the raw DB model
- */
 export interface Job {
   id: string;
   title: string;
-  department?: string;
-  location?: string;
-  locations?: JobLocation[];
-  salary?: string;
-  workType?: string;
-  description: string;
-  screeningQuestions?: ScreeningQuestion[];
-  requireCoverLetter?: boolean;
+  slug: string;
+  status: string;
+  departmentName: string | null;
+  employmentTypeName: string | null;
+  workTypeName: string | null;
+  locations: JobLocation[];
+  currency: string | null;
+  salaryMin: string | null;
+  salaryMax: string | null;
+  payPeriod: string | null;
+  showSalary: boolean;
+  publishedAt: string;
 }
 
-// ============================================================================
-// NAVIGATION
-// ============================================================================
-
-export type ViewState = "list" | "detail" | "apply" | "success";
-
-export interface NavigationState {
-  view: ViewState;
-  selectedJobId: string | null;
-}
-
-// ============================================================================
-// JOB BOARD FLOW PROPS
-// ============================================================================
-
-export interface JobBoardFlowProps {
-  mode: "preview" | "draft" | "live";
+export interface JobsResponse {
   jobs: Job[];
-  isLoading?: boolean;
-  config: JobBoardConfig;
-  initialView?: "list" | "detail";
-  initialJobId?: string;
-  showList?: boolean;
-  onApplicationSubmit?: (jobId: string, data: ApplicationData) => Promise<void>;
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+// ============================================================================
+// JOB FACETS (filter options from API)
+// ============================================================================
+
+export interface FacetOption {
+  label: string;
+  value: string;
+}
+
+export interface JobFacets {
+  departments: FacetOption[];
+  workTypes: FacetOption[];
+  locations: FacetOption[];
+}
+
+// ============================================================================
+// JOB FILTERS (URL search params)
+// ============================================================================
+
+export interface JobFiltersParams {
+  search?: string;
+  department?: string;
+  workType?: string;
+  location?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 // ============================================================================

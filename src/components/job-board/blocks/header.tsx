@@ -1,16 +1,13 @@
 "use client";
 
-import React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { clsx } from "clsx";
-import type { JobBoardConfig } from "../types";
+import { useJobBoardState } from "../context";
 
-interface HeaderProps {
-  config: JobBoardConfig;
-  onHomeClick: () => void;
-}
+export function Header() {
+  const { config, slug } = useJobBoardState();
 
-export const Header: React.FC<HeaderProps> = ({ config, onHomeClick }) => {
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -26,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ config, onHomeClick }) => {
             : "justify-between",
         )}
       >
-        <button onClick={onHomeClick} className="focus:outline-none">
+        <Link href={`/${slug}`} className="focus:outline-none">
           {config.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -39,12 +36,8 @@ export const Header: React.FC<HeaderProps> = ({ config, onHomeClick }) => {
               COMPANY
             </div>
           )}
-        </button>
-
-        {config.logoPosition === "center" && (
-          <div className="hidden @2xl:block absolute right-10"></div>
-        )}
+        </Link>
       </div>
     </motion.header>
   );
-};
+}
