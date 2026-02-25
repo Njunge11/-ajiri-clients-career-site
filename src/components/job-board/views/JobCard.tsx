@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useJobBoardState } from "../context";
@@ -24,6 +24,7 @@ function formatSalary(job: Job): string | null {
 
 export const JobCard: React.FC<JobCardProps> = ({ job, index }) => {
   const { slug } = useJobBoardState();
+  const [prefetch, setPrefetch] = useState(false);
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -66,6 +67,9 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index }) => {
     >
       <Link
         href={`/${slug}/jobs/${job.id}`}
+        prefetch={prefetch ? true : false}
+        onMouseEnter={() => setPrefetch(true)}
+        onFocus={() => setPrefetch(true)}
         className="group relative flex flex-col @2xl:flex-row @2xl:items-center justify-between py-6 border-b border-gray-200 cursor-pointer hover:bg-black/[0.02] transition-colors duration-200 px-2"
       >
         <div className="flex-1">

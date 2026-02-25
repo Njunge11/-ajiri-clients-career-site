@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import Markdown from "react-markdown";
 import { ArrowLeft, MapPin, Coins, Clock, ChevronDown } from "lucide-react";
 import { useJobBoardState } from "../context";
 import type { Job, JobLocation } from "../types";
@@ -139,12 +140,15 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job }) => {
           </div>
 
           <div className="@5xl:col-span-8">
-            <div className="[&>*:first-child]:mt-0">
+            {job.description ? (
+              <div className="prose prose-gray max-w-none [&>*:first-child]:mt-0">
+                <Markdown>{job.description}</Markdown>
+              </div>
+            ) : (
               <p className="text-gray-500">
-                Job description will be available once the detail endpoint is
-                integrated.
+                No description available for this position.
               </p>
-            </div>
+            )}
           </div>
         </div>
       </div>

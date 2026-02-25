@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useMemo,
-  useEffect,
-  useOptimistic,
-  useTransition,
-} from "react";
+import React, { useState, useMemo, useOptimistic, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
 import { JobCard } from "./JobCard";
@@ -58,10 +52,12 @@ export const JobListView: React.FC<JobListViewProps> = ({
   // Search: local state + debounce (correct pattern for continuous typing)
   const currentSearch = searchParams.get("search") ?? "";
   const [searchInput, setSearchInput] = useState(currentSearch);
+  const [prevSearch, setPrevSearch] = useState(currentSearch);
 
-  useEffect(() => {
+  if (currentSearch !== prevSearch) {
+    setPrevSearch(currentSearch);
     setSearchInput(currentSearch);
-  }, [currentSearch]);
+  }
 
   const debouncedSearch = useDebouncedCallback((value: string) => {
     const params = new URLSearchParams(searchParams.toString());

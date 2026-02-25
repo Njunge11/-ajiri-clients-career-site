@@ -67,11 +67,20 @@ export async function fetchFacets(slug: string): Promise<JobFacets> {
   );
 }
 
-// ── Single Job (stub – detail endpoint not yet available) ───────────
+// ── Single Job ─────────────────────────────────────────────────────
 
-export async function fetchJob(id: string): Promise<Job | null> {
-  void id;
-  return null;
+export async function fetchJob(
+  slug: string,
+  jobSlug: string,
+): Promise<Job | null> {
+  try {
+    return await apiFetch<Job>(
+      `api/companies/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(jobSlug)}`,
+    );
+  } catch (err) {
+    console.error("[fetchJob]", err);
+    return null;
+  }
 }
 
 // ── Application (placeholder) ───────────────────────────────────────

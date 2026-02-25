@@ -97,8 +97,11 @@ export interface Job {
   title: string;
   slug: string;
   status: string;
+  description?: string | null;
   departmentName: string | null;
+  jobFunctionName?: string | null;
   employmentTypeName: string | null;
+  experienceLevelName?: string | null;
   workTypeName: string | null;
   locations: JobLocation[];
   currency: string | null;
@@ -106,7 +109,9 @@ export interface Job {
   salaryMax: string | null;
   payPeriod: string | null;
   showSalary: boolean;
+  screeningQuestions?: ScreeningQuestion[];
   publishedAt: string;
+  expiresAt?: string | null;
 }
 
 export interface JobsResponse {
