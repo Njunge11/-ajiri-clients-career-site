@@ -67,7 +67,7 @@ export const JobListView: React.FC<JobListViewProps> = ({
       params.delete("search");
     }
     params.delete("page");
-    router.push(`/${slug}?${params.toString()}`);
+    router.push(`/${slug}?${params.toString()}`, { scroll: false });
   }, 300);
 
   const handleSearchChange = (value: string) => {
@@ -114,7 +114,7 @@ export const JobListView: React.FC<JobListViewProps> = ({
 
     startTransition(() => {
       setOptimisticFilters(newFilters);
-      router.push(`/${slug}?${params.toString()}`);
+      router.push(`/${slug}?${params.toString()}`, { scroll: false });
     });
   };
 
@@ -122,7 +122,7 @@ export const JobListView: React.FC<JobListViewProps> = ({
     setSearchInput("");
     startTransition(() => {
       setOptimisticFilters({ departments: [], locations: [], workTypes: [] });
-      router.push(`/${slug}`);
+      router.push(`/${slug}`, { scroll: false });
     });
   };
 
@@ -236,7 +236,9 @@ export const JobListView: React.FC<JobListViewProps> = ({
                             searchParams.toString(),
                           );
                           params.set("page", String(page - 1));
-                          router.push(`/${slug}?${params.toString()}`);
+                          router.push(`/${slug}?${params.toString()}`, {
+                            scroll: false,
+                          });
                         }}
                         className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
                       >
@@ -253,7 +255,9 @@ export const JobListView: React.FC<JobListViewProps> = ({
                             searchParams.toString(),
                           );
                           params.set("page", String(page + 1));
-                          router.push(`/${slug}?${params.toString()}`);
+                          router.push(`/${slug}?${params.toString()}`, {
+                            scroll: false,
+                          });
                         }}
                         className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
                       >

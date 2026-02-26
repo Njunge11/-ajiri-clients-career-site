@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import { fetchConfig } from "@/lib/api";
+import { configOptions } from "@/lib/queries";
+import { getQueryClient } from "@/lib/get-query-client";
 import { JobBoardShell } from "../job-board-shell";
 
 export default async function CompanyLayout({
@@ -10,6 +13,7 @@ export default async function CompanyLayout({
   children: React.ReactNode;
 }) {
   const { slug } = await params;
+  const queryClient = getQueryClient();
 
   let configResponse;
   try {
@@ -32,9 +36,14 @@ export default async function CompanyLayout({
     );
   }
 
+  // Seed the query cache so client useQuery picks it up
+  queryClient.setQueryData(configOptions(slug).queryKey, configResponse);
+
   return (
-    <JobBoardShell config={configResponse.config} slug={slug}>
-      {children}
-    </JobBoardShell>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <JobBoardShell config={configResponse.config} slug={slug}>
+        {children}
+      </JobBoardShell>
+    </HydrationBoundary>
   );
 }
