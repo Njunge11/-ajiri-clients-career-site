@@ -11,5 +11,4 @@ export const JobBoard = {
 };
 
 export * from "./types";
-export * from "./constants";
 export * from "./views";

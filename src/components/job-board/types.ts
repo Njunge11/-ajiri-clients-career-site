@@ -3,31 +3,6 @@
  */
 
 // ============================================================================
-// SCREENING QUESTIONS (inlined from ajiri lib/db/types/jobs.ts)
-// ============================================================================
-
-export type ScreeningQuestionType =
-  | "yes_no"
-  | "single_select"
-  | "multi_select"
-  | "short_text"
-  | "long_text"
-  | "number"
-  | "url"
-  | "file_upload";
-
-export interface ScreeningQuestion {
-  id: string;
-  type: ScreeningQuestionType;
-  question: string;
-  required: boolean;
-  isKnockout: boolean;
-  knockoutValue?: string;
-  options?: string[];
-  placeholder?: string;
-}
-
-// ============================================================================
 // JOB BOARD CONFIG (Styling/Branding)
 // ============================================================================
 
@@ -87,9 +62,10 @@ export const DEFAULT_JOB_BOARD_CONFIG: JobBoardConfig = {
 // ============================================================================
 
 export interface JobLocation {
-  city?: string;
-  state?: string;
-  country?: string;
+  id: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
 }
 
 export interface Job {
@@ -105,11 +81,10 @@ export interface Job {
   workTypeName: string | null;
   locations: JobLocation[];
   currency: string | null;
-  salaryMin: string | null;
-  salaryMax: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
   payPeriod: string | null;
   showSalary: boolean;
-  screeningQuestions?: ScreeningQuestion[];
   publishedAt: string;
   expiresAt?: string | null;
 }
@@ -150,12 +125,31 @@ export interface JobFiltersParams {
 }
 
 // ============================================================================
+// APPLICATION FORM (from /jobs/[id]/application-form endpoint)
+// ============================================================================
+
+export interface ScreeningQuestion {
+  id: string;
+  type: string;
+  question: string;
+  required: boolean;
+  options?: string[];
+  placeholder?: string;
+}
+
+export interface ApplicationForm {
+  jobId: string;
+  jobTitle: string;
+  requireCoverLetter: boolean;
+  screeningQuestions: ScreeningQuestion[];
+}
+
+// ============================================================================
 // APPLICATION DATA
 // ============================================================================
 
 export interface ApplicationData {
   resumeFile?: File;
   coverLetterFile?: File;
-  linkedinUrl?: string;
   answers: Record<string, string | string[]>;
 }

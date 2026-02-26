@@ -18,7 +18,7 @@ function formatLocation(loc: JobLocation): string {
 
 function formatSalary(job: Job): string | null {
   if (!job.showSalary || !job.salaryMin) return null;
-  const fmt = (v: string) => Number(v).toLocaleString();
+  const fmt = (v: number) => v.toLocaleString();
   const currency = job.currency ?? "";
   const period = job.payPeriod ? `/${job.payPeriod}` : "";
   if (job.salaryMax) {

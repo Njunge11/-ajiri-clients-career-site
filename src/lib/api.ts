@@ -4,6 +4,7 @@ import type {
   JobFacets,
   JobsResponse,
   JobFiltersParams,
+  ApplicationForm,
   ApplicationData,
 } from "@/components/job-board/types";
 
@@ -81,6 +82,17 @@ export async function fetchJob(
     console.error("[fetchJob]", err);
     return null;
   }
+}
+
+// ── Application Form ──────────────────────────────────────────────────
+
+export async function fetchApplicationForm(
+  slug: string,
+  jobId: string,
+): Promise<ApplicationForm> {
+  return apiFetch<ApplicationForm>(
+    `api/companies/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(jobId)}/application-form`,
+  );
 }
 
 // ── Application (placeholder) ───────────────────────────────────────

@@ -2,44 +2,40 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { X, UploadCloud } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useSubmitApplication } from "@/lib/queries";
+import { useSubmitApplication, applicationFormOptions } from "@/lib/queries";
 import { useJobBoardState } from "../context";
 import type { Job, ScreeningQuestion } from "../types";
-import { SAMPLE_SCREENING_QUESTIONS } from "../constants";
 
 interface ApplicationFormViewProps {
   job: Job;
-  mode?: "preview" | "draft" | "live";
 }
 
 export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
   job,
-  mode = "preview",
 }) => {
   const { slug } = useJobBoardState();
   const router = useRouter();
   const submitMutation = useSubmitApplication();
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
-  const [linkedinUrl, setLinkedinUrl] = useState("");
 
-  const questions: ScreeningQuestion[] =
-    mode === "preview" ? SAMPLE_SCREENING_QUESTIONS : [];
+  const { data: form } = useQuery(applicationFormOptions(slug, job.id));
+
+  const questions = form?.screeningQuestions ?? [];
+  const requireCoverLetter = form?.requireCoverLetter ?? false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (mode === "live") {
-      await submitMutation.mutateAsync({
-        jobId: job.id,
-        data: {
-          answers,
-          linkedinUrl: linkedinUrl || undefined,
-        },
-      });
-    }
+    await submitMutation.mutateAsync({
+      jobId: job.id,
+      data: {
+        answers,
+      },
+    });
 
     router.push(`/${slug}/jobs/${job.id}/apply/success`);
   };
@@ -182,27 +178,6 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
             placeholder={q.placeholder || "https://..."}
           />
         )}
-
-        {q.type === "file_upload" && (
-          <div
-            className={`border-2 border-dashed border-gray-200 rounded-lg p-6 text-center transition-colors ${
-              mode !== "live"
-                ? "opacity-75 cursor-not-allowed"
-                : "hover:bg-gray-50 hover:border-gray-300 cursor-pointer"
-            }`}
-          >
-            <UploadCloud className="mx-auto h-8 w-8 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-500">
-              <span className="font-medium text-gray-700">Click to upload</span>{" "}
-              or drag and drop
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {mode !== "live"
-                ? "Preview only"
-                : "PDF, DOCX, PNG, JPG up to 10MB"}
-            </p>
-          </div>
-        )}
       </div>
     );
   };
@@ -237,13 +212,7 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Resume / CV <span className="text-red-500">*</span>
               </label>
-              <div
-                className={`border-2 border-dashed border-gray-200 rounded-lg p-8 text-center transition-colors group ${
-                  mode !== "live"
-                    ? "opacity-75 cursor-not-allowed"
-                    : "hover:bg-gray-50 hover:border-gray-300 cursor-pointer"
-                }`}
-              >
+              <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center transition-colors group hover:bg-gray-50 hover:border-gray-300 cursor-pointer">
                 <UploadCloud className="mx-auto h-10 w-10 text-gray-400 group-hover:text-gray-600" />
                 <p className="mt-2 text-sm text-gray-500">
                   <span className="font-medium text-gray-700">
@@ -252,17 +221,17 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
                   or drag and drop
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {mode !== "live" ? "Preview only" : "PDF, DOCX up to 10MB"}
+                  PDF, DOCX up to 10MB
                 </p>
               </div>
             </div>
 
-            {mode === "preview" && (
+            {requireCoverLetter && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cover Letter
+                  Cover Letter <span className="text-red-500">*</span>
                 </label>
-                <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center transition-colors group opacity-75 cursor-not-allowed">
+                <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center transition-colors group hover:bg-gray-50 hover:border-gray-300 cursor-pointer">
                   <UploadCloud className="mx-auto h-10 w-10 text-gray-400 group-hover:text-gray-600" />
                   <p className="mt-2 text-sm text-gray-500">
                     <span className="font-medium text-gray-700">
@@ -270,23 +239,10 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
                     </span>{" "}
                     or drag and drop
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">Preview only</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    PDF, DOCX up to 10MB
+                  </p>
                 </div>
-              </div>
-            )}
-
-            {mode === "preview" && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  LinkedIn Profile
-                </label>
-                <input
-                  type="url"
-                  value={linkedinUrl}
-                  onChange={(e) => setLinkedinUrl(e.target.value)}
-                  placeholder="https://linkedin.com/in/..."
-                  className="w-full px-4 py-3 border border-gray-200 rounded focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none text-sm"
-                />
               </div>
             )}
           </section>

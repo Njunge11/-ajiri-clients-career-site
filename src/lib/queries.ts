@@ -6,6 +6,7 @@ import type {
   JobFacets,
   JobsResponse,
   JobFiltersParams,
+  ApplicationForm,
   ApplicationData,
 } from "@/components/job-board/types";
 
@@ -75,6 +76,23 @@ export function jobOptions(slug: string, id: string) {
       if (!res.ok) throw new Error(`Job fetch failed: ${res.status}`);
       return res.json();
     },
+  });
+}
+
+// ── Application Form ───────────────────────────────────────────────
+
+export function applicationFormOptions(slug: string, jobId: string) {
+  return queryOptions({
+    queryKey: ["application-form", slug, jobId],
+    queryFn: async (): Promise<ApplicationForm> => {
+      const res = await fetch(
+        `/api/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(jobId)}/application-form`,
+      );
+      if (!res.ok)
+        throw new Error(`Application form fetch failed: ${res.status}`);
+      return res.json();
+    },
+    staleTime: 0,
   });
 }
 
