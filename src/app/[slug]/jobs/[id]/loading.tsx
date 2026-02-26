@@ -29,18 +29,41 @@ export default function JobDetailLoading() {
 
           {/* Right column — description */}
           <div className="@5xl:col-span-8 space-y-4">
+            {/* About the role */}
             <Skeleton className="h-7 w-48" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-5/6" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-3/4" />
+
+            {/* Responsibilities */}
             <div className="pt-4" />
-            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-7 w-52" />
             <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-11/12" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-4/5" />
             <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-3/4" />
+
+            {/* Requirements */}
+            <div className="pt-4" />
+            <Skeleton className="h-7 w-44" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-11/12" />
+            <Skeleton className="h-4 w-4/5" />
+
+            {/* Benefits */}
+            <div className="pt-4" />
+            <Skeleton className="h-7 w-36" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
             <Skeleton className="h-4 w-2/3" />
           </div>
         </div>

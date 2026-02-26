@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useForm, useWatch, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { X, UploadCloud } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSubmitApplication, applicationFormOptions } from "@/lib/queries";
@@ -14,25 +21,85 @@ interface ApplicationFormViewProps {
   job: Job;
 }
 
+function buildSchema(
+  requireCoverLetter: boolean,
+  questions: ScreeningQuestion[],
+) {
+  const shape: Record<string, z.ZodTypeAny> = {
+    resumeFile: z
+      .instanceof(File, { message: "Resume is required" })
+      .refine((f) => f.size > 0, "Resume is required"),
+  };
+
+  if (requireCoverLetter) {
+    shape.coverLetterFile = z
+      .instanceof(File, { message: "Cover letter is required" })
+      .refine((f) => f.size > 0, "Cover letter is required");
+  }
+
+  for (const q of questions) {
+    const key = `q_${q.id}`;
+    if (q.type === "multi_select") {
+      shape[key] = q.required
+        ? z.array(z.string()).min(1, "Please select at least one option")
+        : z.array(z.string()).optional();
+    } else {
+      shape[key] = q.required
+        ? z.string().min(1, "This field is required")
+        : z.string().optional();
+    }
+  }
+
+  return z.object(shape);
+}
+
+type FormValues = Record<string, unknown>;
+
 export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
   job,
 }) => {
   const { slug } = useJobBoardState();
   const router = useRouter();
   const submitMutation = useSubmitApplication();
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
 
   const { data: form } = useQuery(applicationFormOptions(slug, job.id));
 
-  const questions = form?.screeningQuestions ?? [];
+  const questions = useMemo(
+    () => form?.screeningQuestions ?? [],
+    [form?.screeningQuestions],
+  );
   const requireCoverLetter = form?.requireCoverLetter ?? false;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const schema = useMemo(
+    () => buildSchema(requireCoverLetter, questions),
+    [requireCoverLetter, questions],
+  );
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {},
+  });
+
+  const onSubmit = async (data: FormValues) => {
+    const answers: Record<string, string | string[]> = {};
+    for (const q of questions) {
+      const val = data[`q_${q.id}`];
+      if (val !== undefined) {
+        answers[q.id] = val as string | string[];
+      }
+    }
 
     await submitMutation.mutateAsync({
       jobId: job.id,
       data: {
+        resumeFile: data.resumeFile as File | undefined,
+        coverLetterFile: data.coverLetterFile as File | undefined,
         answers,
       },
     });
@@ -44,140 +111,212 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
     router.back();
   };
 
-  const setAnswer = (questionId: string, value: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+  const fieldError = (name: string) => {
+    const err = errors[name];
+    if (!err?.message) return null;
+    return <p className="text-sm text-red-500 mt-1">{err.message as string}</p>;
   };
 
-  const toggleMultiAnswer = (questionId: string, value: string) => {
-    setAnswers((prev) => {
-      const current = (prev[questionId] as string[]) || [];
-      const updated = current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value];
-      return { ...prev, [questionId]: updated };
-    });
+  const resumeFile = useWatch({ control, name: "resumeFile" }) as
+    | File
+    | undefined;
+  const coverLetterFile = useWatch({ control, name: "coverLetterFile" }) as
+    | File
+    | undefined;
+
+  const renderFileUpload = (
+    name: string,
+    label: string,
+    required: boolean,
+    file: File | undefined,
+  ) => {
+    return (
+      <div>
+        <Label className="mb-2">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        <label
+          className={`block border-2 border-dashed rounded-lg p-8 text-center transition-colors group cursor-pointer ${
+            errors[name]
+              ? "border-red-300 hover:border-red-400"
+              : "border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+          }`}
+        >
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) setValue(name, f, { shouldValidate: true });
+            }}
+          />
+          <UploadCloud className="mx-auto h-10 w-10 text-gray-400 group-hover:text-gray-600" />
+          {file ? (
+            <p className="mt-2 text-sm text-gray-700 font-medium">
+              {file.name}
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-gray-500">
+              <span className="font-medium text-gray-700">Click to upload</span>{" "}
+              or drag and drop
+            </p>
+          )}
+          <p className="text-xs text-gray-400 mt-1">PDF, DOCX up to 10MB</p>
+        </label>
+        {fieldError(name)}
+      </div>
+    );
   };
 
   const renderQuestion = (q: ScreeningQuestion, index: number) => {
+    const name = `q_${q.id}`;
     return (
       <div key={q.id} className="space-y-3">
-        <label className="block text-sm font-medium text-gray-700">
+        <Label>
           {index + 1}. {q.question}
           {q.required && <span className="text-red-500 ml-1">*</span>}
           {q.type === "multi_select" && (
-            <span className="text-gray-400 text-xs ml-2 font-normal">
+            <span className="text-muted-foreground text-xs ml-2 font-normal">
               (Select all that apply)
             </span>
           )}
-        </label>
+        </Label>
 
         {q.type === "yes_no" && (
-          <RadioGroup
-            value={(answers[q.id] as string) || ""}
-            onValueChange={(value) => setAnswer(q.id, value)}
-            className="flex gap-6"
-          >
-            {["Yes", "No"].map((option) => (
-              <label
-                key={option}
-                className="flex cursor-pointer items-center gap-2"
+          <Controller
+            name={name}
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <RadioGroup
+                value={(field.value as string) || ""}
+                onValueChange={field.onChange}
+                className="flex gap-6"
               >
-                <RadioGroupItem
-                  value={option}
-                  className="border-gray-300 text-gray-900"
-                />
-                <span className="text-sm text-gray-700">{option}</span>
-              </label>
-            ))}
-          </RadioGroup>
+                {["Yes", "No"].map((option) => (
+                  <label
+                    key={option}
+                    className="flex cursor-pointer items-center gap-2"
+                  >
+                    <RadioGroupItem
+                      value={option}
+                      className="border-gray-300 text-gray-900"
+                    />
+                    <span className="text-sm text-gray-700">{option}</span>
+                  </label>
+                ))}
+              </RadioGroup>
+            )}
+          />
         )}
 
         {q.type === "single_select" && q.options && (
-          <RadioGroup
-            value={(answers[q.id] as string) || ""}
-            onValueChange={(value) => setAnswer(q.id, value)}
-            className="flex flex-col gap-2"
-          >
-            {q.options.map((opt) => (
-              <label
-                key={opt}
-                className="flex cursor-pointer items-center gap-2"
+          <Controller
+            name={name}
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <RadioGroup
+                value={(field.value as string) || ""}
+                onValueChange={field.onChange}
+                className="flex flex-col gap-2"
               >
-                <RadioGroupItem
-                  value={opt}
-                  className="border-gray-300 text-gray-900"
-                />
-                <span className="text-sm text-gray-700">{opt}</span>
-              </label>
-            ))}
-          </RadioGroup>
+                {q.options!.map((opt) => (
+                  <label
+                    key={opt}
+                    className="flex cursor-pointer items-center gap-2"
+                  >
+                    <RadioGroupItem
+                      value={opt}
+                      className="border-gray-300 text-gray-900"
+                    />
+                    <span className="text-sm text-gray-700">{opt}</span>
+                  </label>
+                ))}
+              </RadioGroup>
+            )}
+          />
         )}
 
         {q.type === "multi_select" && q.options && (
-          <div className="grid grid-cols-1 @2xl:grid-cols-2 gap-2">
-            {q.options.map((opt) => {
-              const selected = (answers[q.id] as string[]) || [];
-              const isSelected = selected.includes(opt);
+          <Controller
+            name={name}
+            control={control}
+            defaultValue={[]}
+            render={({ field }) => {
+              const selected = (field.value as string[]) || [];
               return (
-                <label
-                  key={opt}
-                  className={`flex cursor-pointer items-center gap-3 p-3 border rounded transition-colors ${
-                    isSelected
-                      ? "border-gray-900 bg-gray-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => toggleMultiAnswer(q.id, opt)}
-                    className="border-gray-300 data-[state=checked]:bg-gray-900 data-[state=checked]:border-gray-900"
-                  />
-                  <span className="text-sm text-gray-700">{opt}</span>
-                </label>
+                <div className="grid grid-cols-1 @2xl:grid-cols-2 gap-2">
+                  {q.options!.map((opt) => {
+                    const isSelected = selected.includes(opt);
+                    return (
+                      <label
+                        key={opt}
+                        className={`flex cursor-pointer items-center gap-3 p-3 border rounded transition-colors ${
+                          isSelected
+                            ? "border-gray-900 bg-gray-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => {
+                            const updated = isSelected
+                              ? selected.filter((v) => v !== opt)
+                              : [...selected, opt];
+                            field.onChange(updated);
+                          }}
+                          className="border-gray-300 data-[state=checked]:bg-gray-900 data-[state=checked]:border-gray-900"
+                        />
+                        <span className="text-sm text-gray-700">{opt}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               );
-            })}
-          </div>
+            }}
+          />
         )}
 
         {q.type === "short_text" && (
-          <input
+          <Input
             type="text"
-            value={(answers[q.id] as string) || ""}
-            onChange={(e) => setAnswer(q.id, e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none text-sm"
+            {...register(name)}
+            aria-invalid={!!errors[name]}
             placeholder={q.placeholder || "Enter your answer..."}
           />
         )}
 
         {q.type === "long_text" && (
-          <textarea
-            value={(answers[q.id] as string) || ""}
-            onChange={(e) => setAnswer(q.id, e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none text-sm min-h-[120px] resize-none"
+          <Textarea
+            {...register(name)}
+            aria-invalid={!!errors[name]}
             placeholder={q.placeholder || "Enter your answer..."}
+            className="min-h-[120px] resize-none"
           />
         )}
 
         {q.type === "number" && (
-          <input
+          <Input
             type="number"
-            value={(answers[q.id] as string) || ""}
-            onChange={(e) => setAnswer(q.id, e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none text-sm"
+            {...register(name)}
+            aria-invalid={!!errors[name]}
             placeholder={q.placeholder || "Enter a number..."}
             min="0"
           />
         )}
 
         {q.type === "url" && (
-          <input
+          <Input
             type="url"
-            value={(answers[q.id] as string) || ""}
-            onChange={(e) => setAnswer(q.id, e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none text-sm"
+            {...register(name)}
+            aria-invalid={!!errors[name]}
             placeholder={q.placeholder || "https://..."}
           />
         )}
+
+        {fieldError(name)}
       </div>
     );
   };
@@ -193,58 +332,30 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
             Please fill out the details below.
           </p>
         </div>
-        <button
-          onClick={handleClose}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
+        <Button variant="ghost" size="icon" onClick={handleClose}>
           <X size={24} />
-        </button>
+        </Button>
       </div>
 
       <div className="flex-1 p-6 @2xl:p-10 bg-gray-50">
-        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-10">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="max-w-2xl mx-auto space-y-10"
+        >
           <section className="bg-white p-6 @2xl:p-8 rounded-xl shadow-sm space-y-6">
             <h3 className="text-xs font-medium text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-3">
               Documents
             </h3>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Resume / CV <span className="text-red-500">*</span>
-              </label>
-              <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center transition-colors group hover:bg-gray-50 hover:border-gray-300 cursor-pointer">
-                <UploadCloud className="mx-auto h-10 w-10 text-gray-400 group-hover:text-gray-600" />
-                <p className="mt-2 text-sm text-gray-500">
-                  <span className="font-medium text-gray-700">
-                    Click to upload
-                  </span>{" "}
-                  or drag and drop
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  PDF, DOCX up to 10MB
-                </p>
-              </div>
-            </div>
+            {renderFileUpload("resumeFile", "Resume / CV", true, resumeFile)}
 
-            {requireCoverLetter && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cover Letter <span className="text-red-500">*</span>
-                </label>
-                <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center transition-colors group hover:bg-gray-50 hover:border-gray-300 cursor-pointer">
-                  <UploadCloud className="mx-auto h-10 w-10 text-gray-400 group-hover:text-gray-600" />
-                  <p className="mt-2 text-sm text-gray-500">
-                    <span className="font-medium text-gray-700">
-                      Click to upload
-                    </span>{" "}
-                    or drag and drop
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    PDF, DOCX up to 10MB
-                  </p>
-                </div>
-              </div>
-            )}
+            {requireCoverLetter &&
+              renderFileUpload(
+                "coverLetterFile",
+                "Cover Letter",
+                true,
+                coverLetterFile,
+              )}
           </section>
 
           {questions.length > 0 && (
@@ -258,15 +369,16 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
           )}
 
           <div className="pt-2 pb-8">
-            <button
+            <Button
               type="submit"
               disabled={submitMutation.isPending}
-              className="w-full py-4 bg-gray-900 hover:bg-black text-white font-bold uppercase tracking-widest text-sm transition-all hover:scale-[1.01] active:scale-[0.99] rounded disabled:opacity-50"
+              className="w-full py-4 font-bold uppercase tracking-widest text-sm"
+              size="lg"
             >
               {submitMutation.isPending
                 ? "Submitting..."
                 : "Submit Application"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
