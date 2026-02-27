@@ -149,6 +149,8 @@ export interface ApplicationForm {
 // ============================================================================
 
 export interface ApplicationData {
+  email: string;
+  phone: string;
   resumeFile?: File;
   coverLetterFile?: File;
   answers: Record<string, string | string[]>;

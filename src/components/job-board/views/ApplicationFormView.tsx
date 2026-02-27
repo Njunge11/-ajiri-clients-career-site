@@ -26,6 +26,8 @@ function buildSchema(
   questions: ScreeningQuestion[],
 ) {
   const shape: Record<string, z.ZodTypeAny> = {
+    email: z.string().email("Please enter a valid email address"),
+    phone: z.string().min(1, "Phone number is required"),
     resumeFile: z
       .instanceof(File, { message: "Resume is required" })
       .refine((f) => f.size > 0, "Resume is required"),
@@ -98,6 +100,8 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
     await submitMutation.mutateAsync({
       jobId: job.id,
       data: {
+        email: data.email as string,
+        phone: data.phone as string,
         resumeFile: data.resumeFile as File | undefined,
         coverLetterFile: data.coverLetterFile as File | undefined,
         answers,
@@ -342,6 +346,38 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
           onSubmit={handleSubmit(onSubmit)}
           className="max-w-2xl mx-auto space-y-10"
         >
+          <section className="bg-white p-6 @2xl:p-8 rounded-xl shadow-sm space-y-6">
+            <h3 className="text-xs font-medium text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-3">
+              Contact Details
+            </h3>
+
+            <div>
+              <Label className="mb-2">
+                Email <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="email"
+                {...register("email")}
+                aria-invalid={!!errors.email}
+                placeholder="you@example.com"
+              />
+              {fieldError("email")}
+            </div>
+
+            <div>
+              <Label className="mb-2">
+                Phone Number <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="tel"
+                {...register("phone")}
+                aria-invalid={!!errors.phone}
+                placeholder="+1 (555) 000-0000"
+              />
+              {fieldError("phone")}
+            </div>
+          </section>
+
           <section className="bg-white p-6 @2xl:p-8 rounded-xl shadow-sm space-y-6">
             <h3 className="text-xs font-medium text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-3">
               Documents
