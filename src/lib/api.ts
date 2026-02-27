@@ -6,6 +6,7 @@ import type {
   JobFiltersParams,
   ApplicationForm,
   ApplicationData,
+  ApplicationResponse,
 } from "@/components/job-board/types";
 
 const API_URL = process.env.API_URL!;
@@ -95,12 +96,47 @@ export async function fetchApplicationForm(
   );
 }
 
-// ── Application (placeholder) ───────────────────────────────────────
+// ── Application Submit ──────────────────────────────────────────────
 
 export async function submitApplication(
+  slug: string,
   jobId: string,
   data: ApplicationData,
-): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  console.log("Application submitted:", { jobId, data });
+): Promise<ApplicationResponse> {
+  const formData = new FormData();
+  formData.append("firstName", data.firstName);
+  formData.append("lastName", data.lastName);
+  formData.append("email", data.email);
+  formData.append("phone", data.phone);
+
+  if (data.resumeFile) {
+    formData.append("resume", data.resumeFile);
+  }
+  if (data.coverLetterFile) {
+    formData.append("coverLetter", data.coverLetterFile);
+  }
+
+  const screeningAnswers = Object.entries(data.answers).map(
+    ([questionId, answer]) => ({ questionId, answer }),
+  );
+  formData.append("screeningAnswers", JSON.stringify(screeningAnswers));
+
+  const res = await fetch(
+    `/api/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(jobId)}/apply`,
+    { method: "POST", body: formData },
+  );
+
+  const json: ApplicationResponse = await res.json();
+
+  if (!res.ok) {
+    const err = new Error(json.error ?? "Application failed") as Error & {
+      status: number;
+      response: ApplicationResponse;
+    };
+    err.status = res.status;
+    err.response = json;
+    throw err;
+  }
+
+  return json;
 }

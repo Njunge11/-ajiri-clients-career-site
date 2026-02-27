@@ -100,7 +100,14 @@ export function applicationFormOptions(slug: string, jobId: string) {
 
 export function useSubmitApplication() {
   return useMutation({
-    mutationFn: ({ jobId, data }: { jobId: string; data: ApplicationData }) =>
-      submitApplication(jobId, data),
+    mutationFn: ({
+      slug,
+      jobId,
+      data,
+    }: {
+      slug: string;
+      jobId: string;
+      data: ApplicationData;
+    }) => submitApplication(slug, jobId, data),
   });
 }

@@ -149,9 +149,22 @@ export interface ApplicationForm {
 // ============================================================================
 
 export interface ApplicationData {
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   resumeFile?: File;
   coverLetterFile?: File;
   answers: Record<string, string | string[]>;
+}
+
+export interface ApplicationResponse {
+  applicationId?: string;
+  status?: "submitted" | "rejected";
+  rejectionReason?: string;
+  error?: string;
+  details?: {
+    fieldErrors: Record<string, string[]>;
+    formErrors: string[];
+  };
 }

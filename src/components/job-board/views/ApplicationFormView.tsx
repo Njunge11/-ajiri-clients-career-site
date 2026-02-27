@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, UploadCloud } from "lucide-react";
+import { X, UploadCloud, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSubmitApplication, applicationFormOptions } from "@/lib/queries";
 import { useJobBoardState } from "../context";
-import type { Job, ScreeningQuestion } from "../types";
+import type { Job, ScreeningQuestion, ApplicationResponse } from "../types";
 
 interface ApplicationFormViewProps {
   job: Job;
@@ -26,6 +27,8 @@ function buildSchema(
   questions: ScreeningQuestion[],
 ) {
   const shape: Record<string, z.ZodTypeAny> = {
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
     email: z.string().email("Please enter a valid email address"),
     phone: z.string().min(1, "Phone number is required"),
     resumeFile: z
@@ -63,6 +66,7 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
   const { slug } = useJobBoardState();
   const router = useRouter();
   const submitMutation = useSubmitApplication();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { data: form } = useQuery(applicationFormOptions(slug, job.id));
 
@@ -89,6 +93,8 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
   });
 
   const onSubmit = async (data: FormValues) => {
+    setSubmitError(null);
+
     const answers: Record<string, string | string[]> = {};
     for (const q of questions) {
       const val = data[`q_${q.id}`];
@@ -97,18 +103,33 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
       }
     }
 
-    await submitMutation.mutateAsync({
-      jobId: job.id,
-      data: {
-        email: data.email as string,
-        phone: data.phone as string,
-        resumeFile: data.resumeFile as File | undefined,
-        coverLetterFile: data.coverLetterFile as File | undefined,
-        answers,
-      },
-    });
+    try {
+      const result: ApplicationResponse = await submitMutation.mutateAsync({
+        slug,
+        jobId: job.id,
+        data: {
+          firstName: data.firstName as string,
+          lastName: data.lastName as string,
+          email: data.email as string,
+          phone: data.phone as string,
+          resumeFile: data.resumeFile as File | undefined,
+          coverLetterFile: data.coverLetterFile as File | undefined,
+          answers,
+        },
+      });
 
-    router.push(`/${slug}/jobs/${job.id}/apply/success`);
+      router.push(
+        `/${slug}/jobs/${job.id}/apply/success${result.status === "rejected" ? "?rejected=true" : ""}`,
+      );
+    } catch (err) {
+      const apiErr = err as Error & {
+        status?: number;
+        response?: ApplicationResponse;
+      };
+      setSubmitError(
+        apiErr.response?.error ?? apiErr.message ?? "Something went wrong",
+      );
+    }
   };
 
   const handleClose = () => {
@@ -346,10 +367,44 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
           onSubmit={handleSubmit(onSubmit)}
           className="max-w-2xl mx-auto space-y-10"
         >
+          {submitError && (
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          )}
           <section className="bg-white p-6 @2xl:p-8 rounded-xl shadow-sm space-y-6">
             <h3 className="text-xs font-medium text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-3">
               Contact Details
             </h3>
+
+            <div className="grid grid-cols-1 @2xl:grid-cols-2 gap-6">
+              <div>
+                <Label className="mb-2">
+                  First Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  {...register("firstName")}
+                  aria-invalid={!!errors.firstName}
+                  placeholder="Jane"
+                />
+                {fieldError("firstName")}
+              </div>
+
+              <div>
+                <Label className="mb-2">
+                  Last Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  {...register("lastName")}
+                  aria-invalid={!!errors.lastName}
+                  placeholder="Doe"
+                />
+                {fieldError("lastName")}
+              </div>
+            </div>
 
             <div>
               <Label className="mb-2">
