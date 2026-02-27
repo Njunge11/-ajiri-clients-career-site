@@ -12,7 +12,7 @@ export async function POST(
 
   try {
     const res = await fetch(
-      `${API_URL}api/companies/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(id)}/apply`,
+      `${API_URL}api/companies/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(id)}/upload-url`,
       {
         method: "POST",
         headers: {
@@ -27,7 +27,7 @@ export async function POST(
     return NextResponse.json(data, { status: res.status });
   } catch {
     return NextResponse.json(
-      { error: "Failed to submit application" },
+      { error: "Failed to get upload URL" },
       { status: 500 },
     );
   }

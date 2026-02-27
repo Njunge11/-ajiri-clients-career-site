@@ -107,15 +107,13 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
       const result: ApplicationResponse = await submitMutation.mutateAsync({
         slug,
         jobId: job.id,
-        data: {
-          firstName: data.firstName as string,
-          lastName: data.lastName as string,
-          email: data.email as string,
-          phone: data.phone as string,
-          resumeFile: data.resumeFile as File | undefined,
-          coverLetterFile: data.coverLetterFile as File | undefined,
-          answers,
-        },
+        firstName: data.firstName as string,
+        lastName: data.lastName as string,
+        email: data.email as string,
+        phone: data.phone as string,
+        resumeFile: data.resumeFile as File,
+        coverLetterFile: data.coverLetterFile as File | undefined,
+        answers,
       });
 
       router.push(

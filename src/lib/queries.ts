@@ -1,5 +1,5 @@
 import { queryOptions, useMutation } from "@tanstack/react-query";
-import { submitApplication } from "./api";
+import { uploadAndSubmit } from "./api";
 import type {
   JobBoardConfig,
   Job,
@@ -7,7 +7,6 @@ import type {
   JobsResponse,
   JobFiltersParams,
   ApplicationForm,
-  ApplicationData,
 } from "@/components/job-board/types";
 
 // ── Config ──────────────────────────────────────────────────────────
@@ -100,14 +99,19 @@ export function applicationFormOptions(slug: string, jobId: string) {
 
 export function useSubmitApplication() {
   return useMutation({
-    mutationFn: ({
-      slug,
-      jobId,
-      data,
-    }: {
+    mutationFn: (params: {
       slug: string;
       jobId: string;
-      data: ApplicationData;
-    }) => submitApplication(slug, jobId, data),
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      resumeFile: File;
+      coverLetterFile?: File;
+      answers: Record<string, string | string[]>;
+    }) => {
+      const { slug, jobId, ...data } = params;
+      return uploadAndSubmit(slug, jobId, data);
+    },
   });
 }

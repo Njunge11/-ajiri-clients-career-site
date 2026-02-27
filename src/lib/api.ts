@@ -7,6 +7,7 @@ import type {
   ApplicationForm,
   ApplicationData,
   ApplicationResponse,
+  UploadUrlResponse,
 } from "@/components/job-board/types";
 
 const API_URL = process.env.API_URL!;
@@ -96,6 +97,39 @@ export async function fetchApplicationForm(
   );
 }
 
+// ── Presigned Upload ────────────────────────────────────────────────
+
+async function getUploadUrl(
+  slug: string,
+  jobId: string,
+  category: string,
+  mimeType: string,
+): Promise<UploadUrlResponse> {
+  const res = await fetch(
+    `/api/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(jobId)}/upload-url`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category, mimeType }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error("Failed to get upload URL");
+  }
+  return res.json();
+}
+
+async function uploadToS3(url: string, file: File): Promise<void> {
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+  if (!res.ok) {
+    throw new Error("File upload failed");
+  }
+}
+
 // ── Application Submit ──────────────────────────────────────────────
 
 export async function submitApplication(
@@ -103,27 +137,13 @@ export async function submitApplication(
   jobId: string,
   data: ApplicationData,
 ): Promise<ApplicationResponse> {
-  const formData = new FormData();
-  formData.append("firstName", data.firstName);
-  formData.append("lastName", data.lastName);
-  formData.append("email", data.email);
-  formData.append("phone", data.phone);
-
-  if (data.resumeFile) {
-    formData.append("resume", data.resumeFile);
-  }
-  if (data.coverLetterFile) {
-    formData.append("coverLetter", data.coverLetterFile);
-  }
-
-  const screeningAnswers = Object.entries(data.answers).map(
-    ([questionId, answer]) => ({ questionId, answer }),
-  );
-  formData.append("screeningAnswers", JSON.stringify(screeningAnswers));
-
   const res = await fetch(
     `/api/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(jobId)}/apply`,
-    { method: "POST", body: formData },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
   );
 
   const json: ApplicationResponse = await res.json();
@@ -139,4 +159,66 @@ export async function submitApplication(
   }
 
   return json;
+}
+
+// ── Upload Files & Submit ───────────────────────────────────────────
+
+export async function uploadAndSubmit(
+  slug: string,
+  jobId: string,
+  params: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    resumeFile: File;
+    coverLetterFile?: File;
+    answers: Record<string, string | string[]>;
+  },
+): Promise<ApplicationResponse> {
+  // Step 1: Get presigned URLs in parallel
+  const uploadPromises: Promise<UploadUrlResponse>[] = [
+    getUploadUrl(slug, jobId, "applicant-resumes", params.resumeFile.type),
+  ];
+  if (params.coverLetterFile) {
+    uploadPromises.push(
+      getUploadUrl(
+        slug,
+        jobId,
+        "applicant-cover-letters",
+        params.coverLetterFile.type,
+      ),
+    );
+  }
+
+  const uploadUrls = await Promise.all(uploadPromises);
+  const resumeUploadUrl = uploadUrls[0];
+  const coverLetterUploadUrl = uploadUrls[1];
+
+  // Step 2: Upload files to S3 in parallel
+  const s3Promises: Promise<void>[] = [
+    uploadToS3(resumeUploadUrl.url, params.resumeFile),
+  ];
+  if (params.coverLetterFile && coverLetterUploadUrl) {
+    s3Promises.push(
+      uploadToS3(coverLetterUploadUrl.url, params.coverLetterFile),
+    );
+  }
+
+  await Promise.all(s3Promises);
+
+  // Step 3: Submit application with file keys
+  const screeningAnswers = Object.entries(params.answers).map(
+    ([questionId, answer]) => ({ questionId, answer }),
+  );
+
+  return submitApplication(slug, jobId, {
+    firstName: params.firstName,
+    lastName: params.lastName,
+    email: params.email,
+    phone: params.phone,
+    resumeKey: resumeUploadUrl.key,
+    coverLetterKey: coverLetterUploadUrl?.key,
+    screeningAnswers,
+  });
 }

@@ -153,9 +153,14 @@ export interface ApplicationData {
   lastName: string;
   email: string;
   phone: string;
-  resumeFile?: File;
-  coverLetterFile?: File;
-  answers: Record<string, string | string[]>;
+  resumeKey: string;
+  coverLetterKey?: string;
+  screeningAnswers: { questionId: string; answer: string | string[] }[];
+}
+
+export interface UploadUrlResponse {
+  url: string;
+  key: string;
 }
 
 export interface ApplicationResponse {
