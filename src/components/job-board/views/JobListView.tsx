@@ -2,11 +2,13 @@
 
 import React, { useState, useMemo, useOptimistic, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useDebouncedCallback } from "use-debounce";
+import { jobsOptions, facetsOptions } from "@/lib/queries";
 import { JobCard } from "./JobCard";
 import { JobFilters } from "./JobFilters";
 import { useJobBoardState } from "../context";
-import type { Job, JobFacets, FacetOption } from "../types";
+import type { FacetOption } from "../types";
 
 function buildValueMap(options: FacetOption[]) {
   return {
@@ -21,26 +23,39 @@ interface ActiveFilters {
   workTypes: string[];
 }
 
-interface JobListViewProps {
-  jobs: Job[];
-  total: number;
-  page: number;
-  pageSize: number;
-  facets: JobFacets;
-  activeFilters: ActiveFilters;
-}
-
-export const JobListView: React.FC<JobListViewProps> = ({
-  jobs,
-  total,
-  page,
-  pageSize,
-  facets,
-  activeFilters,
-}) => {
+export const JobListView: React.FC = () => {
   const { slug } = useJobBoardState();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const queryFilters = {
+    search: searchParams.get("search") ?? undefined,
+    department: searchParams.get("department") ?? undefined,
+    workType: searchParams.get("workType") ?? undefined,
+    location: searchParams.get("location") ?? undefined,
+    page: searchParams.get("page")
+      ? Number(searchParams.get("page"))
+      : undefined,
+  };
+
+  const activeFilters: ActiveFilters = {
+    departments: queryFilters.department?.split(",").filter(Boolean) ?? [],
+    locations: queryFilters.location?.split(",").filter(Boolean) ?? [],
+    workTypes: queryFilters.workType?.split(",").filter(Boolean) ?? [],
+  };
+
+  const { data: jobsData } = useQuery(jobsOptions(slug, queryFilters));
+  const { data: facetsData } = useQuery(facetsOptions(slug));
+
+  const jobs = jobsData?.jobs ?? [];
+  const total = jobsData?.total ?? 0;
+  const page = jobsData?.page ?? 1;
+  const pageSize = jobsData?.pageSize ?? 100;
+  const facets = facetsData ?? {
+    departments: [],
+    workTypes: [],
+    locations: [],
+  };
   const [isPending, startTransition] = useTransition();
   const [optimisticFilters, setOptimisticFilters] =
     useOptimistic(activeFilters);

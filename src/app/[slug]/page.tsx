@@ -29,25 +29,13 @@ export default async function HomePage({
     fetchFacets(slug),
   ]);
 
-  // Seed the query cache
   queryClient.setQueryData(jobsOptions(slug, filters).queryKey, jobsData);
   queryClient.setQueryData(facetsOptions(slug).queryKey, facetsData);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <JobBoard.Hero />
-      <JobListView
-        jobs={jobsData.jobs}
-        total={jobsData.total}
-        page={jobsData.page}
-        pageSize={jobsData.pageSize}
-        facets={facetsData}
-        activeFilters={{
-          departments: sp.department?.split(",").filter(Boolean) ?? [],
-          locations: sp.location?.split(",").filter(Boolean) ?? [],
-          workTypes: sp.workType?.split(",").filter(Boolean) ?? [],
-        }}
-      />
+      <JobListView />
     </HydrationBoundary>
   );
 }
