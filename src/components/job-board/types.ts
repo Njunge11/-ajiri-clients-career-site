@@ -155,6 +155,7 @@ export interface ApplicationData {
   phone: string;
   resumeKey: string;
   coverLetterKey?: string;
+  timezone: string;
   screeningAnswers: { questionId: string; answer: string | string[] }[];
 }
 
