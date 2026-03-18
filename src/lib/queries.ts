@@ -108,6 +108,8 @@ export function useSubmitApplication() {
       phone: string;
       resumeFile: File;
       coverLetterFile?: File;
+      expectedSalary?: number;
+      expectedSalaryCurrency?: string;
       answers: Record<string, string | string[]>;
     }) => {
       const { slug, jobId, ...data } = params;

@@ -24,6 +24,7 @@ interface ApplicationFormViewProps {
 
 function buildSchema(
   requireCoverLetter: boolean,
+  askExpectedSalary: boolean,
   questions: ScreeningQuestion[],
 ) {
   const shape: Record<string, z.ZodTypeAny> = {
@@ -40,6 +41,16 @@ function buildSchema(
     shape.coverLetterFile = z
       .instanceof(File, { message: "Cover letter is required" })
       .refine((f) => f.size > 0, "Cover letter is required");
+  }
+
+  if (askExpectedSalary) {
+    shape.expectedSalary = z
+      .string()
+      .min(1, "Expected salary is required")
+      .refine(
+        (v) => !isNaN(Number(v)) && Number(v) > 0,
+        "Must be a positive number",
+      );
   }
 
   for (const q of questions) {
@@ -75,10 +86,17 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
     [form?.screeningQuestions],
   );
   const requireCoverLetter = form?.requireCoverLetter ?? false;
+  const askExpectedSalary = form?.askExpectedSalary ?? false;
+
+  console.log(
+    "[ApplicationForm] raw form data:",
+    JSON.stringify(form, null, 2),
+  );
+  console.log("[ApplicationForm] askExpectedSalary:", askExpectedSalary);
 
   const schema = useMemo(
-    () => buildSchema(requireCoverLetter, questions),
-    [requireCoverLetter, questions],
+    () => buildSchema(requireCoverLetter, askExpectedSalary, questions),
+    [requireCoverLetter, askExpectedSalary, questions],
   );
 
   const {
@@ -113,6 +131,12 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
         phone: data.phone as string,
         resumeFile: data.resumeFile as File,
         coverLetterFile: data.coverLetterFile as File | undefined,
+        expectedSalary: data.expectedSalary
+          ? Number(data.expectedSalary)
+          : undefined,
+        expectedSalaryCurrency: data.expectedSalary
+          ? (job.currency ?? undefined)
+          : undefined,
         answers,
       });
 
@@ -446,6 +470,34 @@ export const ApplicationFormView: React.FC<ApplicationFormViewProps> = ({
                 coverLetterFile,
               )}
           </section>
+
+          {askExpectedSalary && (
+            <section className="bg-white p-6 @2xl:p-8 rounded-xl shadow-sm space-y-6">
+              <h3 className="text-xs font-medium text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-3">
+                Salary Expectations
+              </h3>
+
+              <div>
+                <Label className="mb-2">
+                  Expected Monthly Gross Salary{" "}
+                  {job.currency && (
+                    <span className="text-muted-foreground font-normal">
+                      ({job.currency})
+                    </span>
+                  )}{" "}
+                  <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  {...register("expectedSalary")}
+                  aria-invalid={!!errors.expectedSalary}
+                  placeholder="e.g. 80000"
+                  min="0"
+                />
+                {fieldError("expectedSalary")}
+              </div>
+            </section>
+          )}
 
           {questions.length > 0 && (
             <section className="bg-white p-6 @2xl:p-8 rounded-xl shadow-sm space-y-8">
