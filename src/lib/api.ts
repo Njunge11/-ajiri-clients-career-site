@@ -219,6 +219,7 @@ export async function uploadAndSubmit(
     phone: params.phone,
     resumeKey: resumeUploadUrl.key,
     coverLetterKey: coverLetterUploadUrl?.key,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     screeningAnswers,
   });
 }
