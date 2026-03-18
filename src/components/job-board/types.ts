@@ -141,6 +141,7 @@ export interface ApplicationForm {
   jobId: string;
   jobTitle: string;
   requireCoverLetter: boolean;
+  askExpectedSalary: boolean;
   screeningQuestions: ScreeningQuestion[];
 }
 
@@ -155,6 +156,8 @@ export interface ApplicationData {
   phone: string;
   resumeKey: string;
   coverLetterKey?: string;
+  expectedSalary?: number;
+  expectedSalaryCurrency?: string;
   timezone: string;
   screeningAnswers: { questionId: string; answer: string | string[] }[];
 }

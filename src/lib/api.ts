@@ -173,6 +173,8 @@ export async function uploadAndSubmit(
     phone: string;
     resumeFile: File;
     coverLetterFile?: File;
+    expectedSalary?: number;
+    expectedSalaryCurrency?: string;
     answers: Record<string, string | string[]>;
   },
 ): Promise<ApplicationResponse> {
@@ -219,6 +221,8 @@ export async function uploadAndSubmit(
     phone: params.phone,
     resumeKey: resumeUploadUrl.key,
     coverLetterKey: coverLetterUploadUrl?.key,
+    expectedSalary: params.expectedSalary,
+    expectedSalaryCurrency: params.expectedSalaryCurrency,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     screeningAnswers,
   });
